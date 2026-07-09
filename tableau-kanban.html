@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trello — Tableau kanban</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#1B2430;
+    --ink-soft:#2A3444;
+    --paper:#F7F3EC;
+    --paper-line:#DCD4C4;
+    --mustard:#E0A458;
+    --teal:#4C8577;
+    --rose:#C1666B;
+    --muted:#9A8F7A;
+    --shadow: 0 6px 16px rgba(15,20,28,.18);
+  }
+
+  *{box-sizing:border-box;}
+
+  body{
+    margin:0;
+    min-height:100vh;
+    background:
+      radial-gradient(circle at 15% 10%, rgba(224,164,88,.08), transparent 40%),
+      radial-gradient(circle at 85% 90%, rgba(76,133,119,.10), transparent 45%),
+      var(--ink);
+    font-family:'Inter', sans-serif;
+    color: var(--paper);
+    display:flex;
+    flex-direction:column;
+  }
+
+  header{
+    padding: 24px 40px 18px;
+    display:flex;
+    align-items:center;
+    gap:22px;
+    border-bottom: 1px solid rgba(247,243,236,.12);
+  }
+
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+
+  .brand-mark{
+    width:34px;
+    height:34px;
+    flex-shrink:0;
+  }
+
+  .brand-name{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size:20px;
+    letter-spacing:.01em;
+    color: var(--mustard);
+    white-space:nowrap;
+  }
+
+  .header-divider{
+    width:1px;
+    height:26px;
+    background: rgba(247,243,236,.18);
+  }
+
+  .title-block{
+    display:flex;
+    align-items:baseline;
+    gap:14px;
+    flex-wrap:wrap;
+  }
+
+  header h1{
+    font-family:'Fraunces', serif;
+    font-weight:700;
+    font-size: clamp(22px, 3vw, 30px);
+    margin:0;
+    letter-spacing:.2px;
+  }
+  header h1[contenteditable]{outline:none; cursor:text; border-bottom:1px dashed transparent;}
+  header h1[contenteditable]:hover{border-bottom:1px dashed var(--muted);}
+
+  header .sub{
+    font-family:'JetBrains Mono', monospace;
+    font-size:12px;
+    color: var(--muted);
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+
+  main{
+    flex:1;
+    display:flex;
+    gap:22px;
+    padding: 28px 40px 40px;
+    overflow-x:auto;
+    align-items:flex-start;
+  }
+
+  .list{
+    background: rgba(247,243,236,.04);
+    border:1px solid rgba(247,243,236,.10);
+    border-radius:4px;
+    width:280px;
+    min-width:280px;
+    display:flex;
+    flex-direction:column;
+    max-height: calc(100vh - 150px);
+  }
+
+  .list-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding: 12px 14px 10px;
+    border-bottom: 2px solid var(--mustard);
+    position:relative;
+  }
+
+  .list-header::before{
+    content:"";
+    position:absolute;
+    left:14px; right:14px; top:0;
+    height:2px;
+  }
+
+  .list-title{
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:16px;
+    outline:none;
+    flex:1;
+    padding-right:8px;
+  }
+
+  .count{
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color: var(--ink);
+    background: var(--mustard);
+    border-radius:10px;
+    padding:1px 8px;
+    margin-right:6px;
+  }
+
+  .list-delete{
+    background:none; border:none; color: var(--muted); cursor:pointer;
+    font-size:16px; line-height:1; padding:2px 4px;
+  }
+  .list-delete:hover{ color: var(--rose); }
+
+  .cards{
+    flex:1;
+    overflow-y:auto;
+    padding: 12px;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+
+  .card{
+    background: var(--paper);
+    color: var(--ink);
+    border-radius:2px;
+    padding: 12px 14px 12px 16px;
+    position:relative;
+    box-shadow: var(--shadow);
+    cursor:grab;
+    font-size:14px;
+    line-height:1.4;
+    border-left: 4px solid var(--card-color, var(--teal));
+    background-image: repeating-linear-gradient(
+        to bottom,
+        transparent 0px, transparent 27px,
+        var(--paper-line) 27px, var(--paper-line) 28px
+      );
+  }
+  .card.dragging{ opacity:.4; cursor:grabbing; }
+  .card::before{
+    content:"";
+    position:absolute;
+    top:-5px; left:50%;
+    transform:translateX(-50%);
+    width:9px; height:9px;
+    border-radius:50%;
+    background: var(--ink);
+    box-shadow: inset 0 1px 2px rgba(0,0,0,.4);
+  }
+
+  .card[contenteditable]{ outline:none; }
+
+  .card-tools{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    margin-top:9px;
+    opacity:0;
+    transition:opacity .15s ease;
+  }
+  .card:hover .card-tools{ opacity:1; }
+  .card-tools button{
+    background:none;border:none;cursor:pointer;
+    font-family:'JetBrains Mono', monospace;
+    font-size:11px;
+    color: var(--muted);
+  }
+  .card-tools button:hover{ color: var(--rose); }
+
+  .swatches{
+    display:flex;
+    gap:6px;
+  }
+  .swatch{
+    width:13px; height:13px;
+    border-radius:50%;
+    cursor:pointer;
+    border:1px solid rgba(27,36,48,.25);
+    box-shadow: 0 1px 2px rgba(0,0,0,.15);
+  }
+  .swatch.active{
+    box-shadow: 0 0 0 2px var(--paper), 0 0 0 3px var(--ink);
+  }
+  .swatch.none{
+    background: repeating-linear-gradient(45deg, #ccc, #ccc 2px, #eee 2px, #eee 4px);
+  }
+
+  .add-card-btn{
+    margin: 0 12px 12px;
+    background:none;
+    border:1px dashed rgba(247,243,236,.3);
+    color: var(--paper);
+    border-radius:2px;
+    padding:8px 10px;
+    font-size:13px;
+    cursor:pointer;
+    text-align:left;
+    font-family:'Inter', sans-serif;
+  }
+  .add-card-btn:hover{ border-color: var(--mustard); color: var(--mustard); }
+
+  .new-list{
+    width:280px;
+    min-width:280px;
+    display:flex;
+  }
+  .new-list button{
+    width:100%;
+    background: rgba(247,243,236,.03);
+    border:1px dashed rgba(247,243,236,.25);
+    color: var(--paper);
+    border-radius:4px;
+    padding: 14px;
+    font-family:'Fraunces', serif;
+    font-weight:600;
+    font-size:15px;
+    cursor:pointer;
+  }
+  .new-list button:hover{ border-color: var(--mustard); color: var(--mustard); }
+
+  main::-webkit-scrollbar, .cards::-webkit-scrollbar{ height:8px; width:6px; }
+  main::-webkit-scrollbar-thumb, .cards::-webkit-scrollbar-thumb{
+    background: rgba(247,243,236,.15); border-radius:4px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <svg class="brand-mark" viewBox="0 0 34 34" xmlns="http://www.w3.org/2000/svg">
+      <circle cx="17" cy="17" r="16" fill="none" stroke="#E0A458" stroke-width="1.5"/>
+      <circle cx="17" cy="12" r="4" fill="#E0A458"/>
+      <path d="M17 15.5 L17 26" stroke="#E0A458" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="17" cy="12" r="1.4" fill="#1B2430"/>
+    </svg>
+    <span class="brand-name">Trello</span>
+  </div>
+  <div class="header-divider"></div>
+  <div class="title-block">
+    <h1 id="board-title" contenteditable="true" spellcheck="false">Mon tableau de bord</h1>
+    <span class="sub">— cliquez ici  —</span>
+  </div>
+</header>
+
+<main id="board"></main>
+
+<script>
+  // ---- État en mémoire (aucune sauvegarde locale : tout repart à zéro si vous rechargez la page) ----
+  let state = {
+    lists: [
+      { id: 'l1', title: 'À faire', cards: [
+        { id: 'c1', text: 'Définir le plan du projet', color: '#E0A458' },
+        { id: 'c2', text: 'Réunir les ressources nécessaires', color: null },
+        { id: 'c3', text: 'Contacter le fournisseur pour les devis', color: '#C1666B' },
+        { id: 'c4', text: 'Préparer l\'ordre du jour de la réunion', color: null },
+        { id: 'c5', text: 'Rédiger le cahier des charges', color: '#4C8577' },
+        { id: 'c6', text: 'Planifier la répartition des tâches', color: null }
+      ]},
+      { id: 'l2', title: 'En cours', cards: [
+        { id: 'c7', text: 'Rédiger la première version du texte', color: '#7E8CA3' },
+        { id: 'c8', text: 'Créer les maquettes de l\'interface', color: '#E0A458' },
+        { id: 'c9', text: 'Développer la page d\'accueil', color: '#4C8577' },
+        { id: 'c10', text: 'Tester le formulaire de contact', color: null }
+      ]},
+      { id: 'l3', title: 'En relecture', cards: [
+        { id: 'c11', text: 'Vérifier l\'orthographe du site', color: null },
+        { id: 'c12', text: 'Relire le contrat avec l\'équipe juridique', color: '#C1666B' },
+        { id: 'c13', text: 'Valider les visuels avec le client', color: '#E0A458' }
+      ]},
+      { id: 'l4', title: 'Terminé', cards: [
+        { id: 'c14', text: 'Choisir le nom du projet', color: '#4C8577' },
+        { id: 'c15', text: 'Réserver le nom de domaine', color: '#4C8577' },
+        { id: 'c16', text: 'Installer l\'environnement de travail', color: null },
+        { id: 'c17', text: 'Créer le dépôt Git', color: null },
+        { id: 'c18', text: 'Définir la charte graphique', color: '#7E8CA3' }
+      ]}
+    ]
+  };
+
+  // Palette d'étiquettes disponibles pour chaque carte
+  const LABELS = [
+    { name: 'urgent',      color: '#C1666B' },
+    { name: 'important',   color: '#E0A458' },
+    { name: 'en attente',  color: '#4C8577' },
+    { name: 'idée',        color: '#7E8CA3' },
+    { name: 'aucune',      color: null }
+  ];
+
+  let idCounter = 10;
+  const newId = () => 'id' + (idCounter++) + '_' + Date.now().toString(36);
+
+  const board = document.getElementById('board');
+  let dragCardId = null;
+  let dragFromListId = null;
+
+  function render(){
+    board.innerHTML = '';
+
+    state.lists.forEach(list => {
+      const listEl = document.createElement('div');
+      listEl.className = 'list';
+      listEl.dataset.listId = list.id;
+
+      // header
+      const headerEl = document.createElement('div');
+      headerEl.className = 'list-header';
+
+      const titleEl = document.createElement('div');
+      titleEl.className = 'list-title';
+      titleEl.contentEditable = true;
+      titleEl.spellcheck = false;
+      titleEl.textContent = list.title;
+      titleEl.addEventListener('blur', () => {
+        list.title = titleEl.textContent.trim() || 'Sans titre';
+      });
+
+      const rightWrap = document.createElement('div');
+      rightWrap.style.display = 'flex';
+      rightWrap.style.alignItems = 'center';
+
+      const countEl = document.createElement('span');
+      countEl.className = 'count';
+      countEl.textContent = list.cards.length;
+
+      const delListBtn = document.createElement('button');
+      delListBtn.className = 'list-delete';
+      delListBtn.innerHTML = '&times;';
+      delListBtn.title = 'Supprimer la liste';
+      delListBtn.addEventListener('click', () => {
+        state.lists = state.lists.filter(l => l.id !== list.id);
+        render();
+      });
+
+      rightWrap.appendChild(countEl);
+      rightWrap.appendChild(delListBtn);
+      headerEl.appendChild(titleEl);
+      headerEl.appendChild(rightWrap);
+
+      // cards container
+      const cardsEl = document.createElement('div');
+      cardsEl.className = 'cards';
+      cardsEl.addEventListener('dragover', e => {
+        e.preventDefault();
+        cardsEl.style.background = 'rgba(224,164,88,.06)';
+      });
+      cardsEl.addEventListener('dragleave', () => {
+        cardsEl.style.background = '';
+      });
+      cardsEl.addEventListener('drop', e => {
+        e.preventDefault();
+        cardsEl.style.background = '';
+        if (!dragCardId) return;
+        const fromList = state.lists.find(l => l.id === dragFromListId);
+        const card = fromList.cards.find(c => c.id === dragCardId);
+        fromList.cards = fromList.cards.filter(c => c.id !== dragCardId);
+        list.cards.push(card);
+        dragCardId = null;
+        dragFromListId = null;
+        render();
+      });
+
+      list.cards.forEach(card => {
+        const cardEl = document.createElement('div');
+        cardEl.className = 'card';
+        cardEl.draggable = true;
+        if (card.color) cardEl.style.setProperty('--card-color', card.color);
+
+        cardEl.addEventListener('dragstart', () => {
+          dragCardId = card.id;
+          dragFromListId = list.id;
+          cardEl.classList.add('dragging');
+        });
+        cardEl.addEventListener('dragend', () => {
+          cardEl.classList.remove('dragging');
+        });
+
+        const textEl = document.createElement('div');
+        textEl.contentEditable = true;
+        textEl.spellcheck = false;
+        textEl.textContent = card.text;
+        textEl.addEventListener('blur', () => {
+          card.text = textEl.textContent.trim() || '(vide)';
+        });
+
+        const tools = document.createElement('div');
+        tools.className = 'card-tools';
+
+        const swatches = document.createElement('div');
+        swatches.className = 'swatches';
+        LABELS.forEach(label => {
+          const dot = document.createElement('span');
+          dot.className = 'swatch' + (label.color === null ? ' none' : '') +
+            ((card.color || null) === label.color ? ' active' : '');
+          if (label.color) dot.style.background = label.color;
+          dot.title = label.name;
+          dot.addEventListener('click', () => {
+            card.color = label.color;
+            render();
+          });
+          swatches.appendChild(dot);
+        });
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = 'supprimer';
+        delBtn.addEventListener('click', () => {
+          list.cards = list.cards.filter(c => c.id !== card.id);
+          render();
+        });
+
+        tools.appendChild(swatches);
+        tools.appendChild(delBtn);
+
+        cardEl.appendChild(textEl);
+        cardEl.appendChild(tools);
+        cardsEl.appendChild(cardEl);
+      });
+
+      // add card button
+      const addCardBtn = document.createElement('button');
+      addCardBtn.className = 'add-card-btn';
+      addCardBtn.textContent = '+ Ajouter une carte';
+      addCardBtn.addEventListener('click', () => {
+        const card = { id: newId(), text: 'Nouvelle carte', color: null };
+        list.cards.push(card);
+        render();
+        // focus the new card for immediate editing
+        setTimeout(() => {
+          const els = document.querySelectorAll(`[data-list-id="${list.id}"] .card`);
+          const lastCard = els[els.length - 1];
+          if (lastCard){
+            const editable = lastCard.querySelector('[contenteditable]');
+            editable.focus();
+            document.execCommand('selectAll', false, null);
+          }
+        }, 0);
+      });
+
+      listEl.appendChild(headerEl);
+      listEl.appendChild(cardsEl);
+      listEl.appendChild(addCardBtn);
+      board.appendChild(listEl);
+    });
+
+    // add-list column
+    const newListWrap = document.createElement('div');
+    newListWrap.className = 'new-list';
+    const newListBtn = document.createElement('button');
+    newListBtn.textContent = '+ Ajouter une liste';
+    newListBtn.addEventListener('click', () => {
+      const list = { id: newId(), title: 'Nouvelle liste', cards: [] };
+      state.lists.push(list);
+      render();
+    });
+    newListWrap.appendChild(newListBtn);
+    board.appendChild(newListWrap);
+  }
+
+  render();
+</script>
+
+</body>
+</html>
